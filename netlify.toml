@@ -1,0 +1,14 @@
+[build]
+  command = "npm install && node ./node_modules/vite/bin/vite.js build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/bpm-importer"
+  to = "/bpm-importer.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WOW Player — BPM Database Importer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+  :root{--bg:#0a0a12;--surface:#12121e;--surface2:#1a1a2a;--border:rgba(255,255,255,0.08);--accent:#1DB954;--accent2:#5bb8c4;--text:rgba(255,255,255,0.9);--muted:rgba(255,255,255,0.4);--faint:rgba(255,255,255,0.12);--error:#e06070;--warn:#e8b84a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(91,184,196,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(91,184,196,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+  .container{width:100%;max-width:680px;position:relative;z-index:1}
+  header{margin-bottom:40px;text-align:center}
+  .logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:16px}
+  .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(0.8)}}
+  h1{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;letter-spacing:-1px;background:linear-gradient(135deg,#fff 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .subtitle{font-size:14px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .steps{display:flex;gap:8px;margin-bottom:32px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .step{flex:1;text-align:center;font-size:12px;color:var(--muted);position:relative}
+  .step:not(:last-child)::after{content:'→';position:absolute;right:-8px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:14px}
+  .step-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--accent2);font-family:'DM Mono',monospace;font-size:11px;margin-bottom:6px;color:var(--accent2)}
+  .step-label{display:block;font-size:11px;line-height:1.3}
+  .dropzone{border:2px dashed var(--border);border-radius:16px;padding:48px 32px;text-align:center;cursor:pointer;transition:all 0.2s ease;background:var(--surface);margin-bottom:24px}
+  .dropzone:hover,.dropzone.drag-over{border-color:var(--accent2);background:rgba(91,184,196,0.05)}
+  .dropzone.has-file{border-color:var(--accent);border-style:solid;background:rgba(29,185,84,0.05)}
+  .drop-icon{font-size:40px;margin-bottom:12px;display:block}
+  .drop-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px}
+  .drop-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+  .browse-btn{background:var(--faint);border:1px solid var(--border);color:var(--text);padding:8px 20px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;transition:all 0.15s}
+  .browse-btn:hover{background:rgba(255,255,255,0.12)}
+  #file-input{display:none}
+  .file-info{display:none;align-items:center;gap:12px;background:rgba(29,185,84,0.08);border:1px solid rgba(29,185,84,0.2);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:13px}
+  .file-info.visible{display:flex}
+  .file-info-icon{font-size:20px}
+  .file-info-name{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)}
+  .file-info-stats{color:var(--muted);font-size:12px}
+  .file-clear{margin-left:auto;cursor:pointer;color:var(--muted);font-size:18px;line-height:1}
+  .file-clear:hover{color:var(--error)}
+  .rules{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent2);border-radius:10px;padding:14px 16px;font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:24px}
+  .rules strong{color:var(--text)}
+  .import-btn{width:100%;padding:16px;background:linear-gradient(135deg,var(--accent) 0%,#17a845 100%);color:#000;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;border:none;border-radius:12px;cursor:pointer;transition:all 0.2s;margin-bottom:24px;letter-spacing:0.3px}
+  .import-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(29,185,84,0.3)}
+  .import-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+  .progress-wrap{display:none;margin-bottom:24px}
+  .progress-wrap.visible{display:block}
+  .progress-header{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px}
+  .progress-bar-bg{background:var(--surface2);border-radius:6px;height:8px;overflow:hidden}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:6px;transition:width 0.3s ease;width:0%}
+  .log{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;max-height:300px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:11px;line-height:1.7;display:none}
+  .log.visible{display:block}
+  .log-entry{color:var(--muted)}.log-entry.ok{color:rgba(29,185,84,0.8)}.log-entry.halved{color:var(--warn)}.log-entry.error{color:var(--error)}.log-entry.info{color:var(--accent2)}.log-entry.done{color:var(--text);font-weight:500}
+  .summary{display:none;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+  .summary.visible{display:grid}
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+  .summary-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:4px}
+  .summary-num.green{color:var(--accent)}.summary-num.yellow{color:var(--warn)}.summary-num.red{color:var(--error)}
+  .summary-label{font-size:11px;color:var(--muted)}
+  footer{margin-top:48px;text-align:center;font-size:11px;color:var(--faint)}
+  footer a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo-row"><div class="logo-dot"></div><h1>WOW Player BPM Importer</h1><div class="logo-dot"></div></div>
+    <p class="subtitle">Import BPM data from an Exportify CSV directly into the shared dance community database.<br>No installation required — runs entirely in your browser.</p>
+  </header>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><span class="step-label">Export playlist from<br><strong>exportify.app</strong></span></div>
+    <div class="step"><div class="step-num">2</div><span class="step-label">Enable<br><strong>Audio Features</strong> ⚙️</span></div>
+    <div class="step"><div class="step-num">3</div><span class="step-label">Drop CSV here<br>&amp; import</span></div>
+  </div>
+  <div class="dropzone" id="dropzone">
+    <span class="drop-icon">🎵</span>
+    <div class="drop-title">Drop your Exportify CSV here</div>
+    <p class="drop-sub">Must include audio features data (click ⚙️ in Exportify before exporting)</p>
+    <button class="browse-btn" onclick="document.getElementById('file-input').click()">Browse for file</button>
+    <input type="file" id="file-input" accept=".csv">
+  </div>
+  <div class="file-info" id="file-info">
+    <span class="file-info-icon">📄</span>
+    <div><div class="file-info-name" id="file-name">—</div><div class="file-info-stats" id="file-stats">—</div></div>
+    <span class="file-clear" onclick="clearFile()">✕</span>
+  </div>
+  <div class="rules">
+    <strong>What happens during import:</strong><br>
+    🎯 Tempo &gt; 140 BPM is automatically halved (WCS convention)<br>
+    🔑 Songs are keyed by title + artist — existing entries will be overwritten<br>
+    🔥 Data goes directly into the shared Firebase database all WOW Player users share<br>
+    ⏱ ~1,000 tracks takes about 60 seconds
+  </div>
+  <button class="import-btn" id="import-btn" disabled onclick="runImport()">Import to BPM Database</button>
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-header"><span id="progress-label">Importing...</span><span id="progress-pct">0%</span></div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+  </div>
+  <div class="log" id="log"></div>
+  <div class="summary" id="summary">
+    <div class="summary-card"><div class="summary-num green" id="sum-imported">0</div><div class="summary-label">Imported</div></div>
+    <div class="summary-card"><div class="summary-num yellow" id="sum-halved">0</div><div class="summary-label">Halved (&gt;140 BPM)</div></div>
+    <div class="summary-card"><div class="summary-num red" id="sum-errors">0</div><div class="summary-label">Errors</div></div>
+  </div>
+</div>
+<footer>WOW Player · Built for West Coast Swing dance communities · originally built by <a href="https://westorlandowesties.netlify.app" target="_blank">West Orlando Westies</a></footer>
+<script>
+const BPM_PROXY="/.netlify/functions/bpm";
+let parsedRows=[],fileLoaded=false;
+const dropzone=document.getElementById('dropzone'),fileInput=document.getElementById('file-input');
+dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('drag-over')});
+dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('drag-over'));
+dropzone.addEventListener('drop',e=>{e.preventDefault();dropzone.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+dropzone.addEventListener('click',e=>{if(e.target.classList.contains('browse-btn'))return;fileInput.click()});
+fileInput.addEventListener('change',()=>{if(fileInput.files[0])handleFile(fileInput.files[0])});
+function handleFile(file){if(!file.name.endsWith('.csv')){alert('Please select a CSV file.');return}const r=new FileReader();r.onload=e=>parseCSV(e.target.result,file.name);r.readAsText(file,'UTF-8')}
+function parseCSV(text,filename){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2){alert('CSV appears empty.');return}
+  const headers=parseCSVLine(lines[0]);
+  const tempoIdx=headers.findIndex(h=>h.toLowerCase()==='tempo');
+  const titleIdx=headers.findIndex(h=>h.toLowerCase()==='track name');
+  const artistIdx=headers.findIndex(h=>h.toLowerCase().includes('artist name'));
+  if(tempoIdx===-1){alert('No "Tempo" column found.\n\nMake sure you clicked the ⚙️ gear in Exportify and checked "Include audio features data" before exporting.');return}
+  parsedRows=[];let skipped=0;
+  for(let i=1;i<lines.length;i++){
+    const cols=parseCSVLine(lines[i]);
+    const tempo=parseFloat(cols[tempoIdx]);
+    const title=(cols[titleIdx]||'').trim();
+    const artist=(cols[artistIdx]||'').trim();
+    if(!title||isNaN(tempo)){skipped++;continue}
+    parsedRows.push({title,artist,tempo});
+  }
+  const over140=parsedRows.filter(r=>r.tempo>140).length;
+  document.getElementById('file-name').textContent=filename;
+  document.getElementById('file-stats').textContent=`${parsedRows.length} tracks with BPM · ${over140} will be halved · ${skipped} skipped (no tempo)`;
+  document.getElementById('file-info').classList.add('visible');
+  dropzone.classList.add('has-file');
+  dropzone.querySelector('.drop-title').textContent='File loaded ✓';
+  document.getElementById('import-btn').disabled=false;
+  fileLoaded=true;
+}
+function parseCSVLine(line){const result=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++}else inQ=!inQ}else if(ch===','&&!inQ){result.push(cur);cur=''}else cur+=ch}result.push(cur);return result.map(s=>s.trim().replace(/^"|"$/g,''))}
+function clearFile(){parsedRows=[];fileLoaded=false;fileInput.value='';document.getElementById('file-info').classList.remove('visible');dropzone.classList.remove('has-file');dropzone.querySelector('.drop-title').textContent='Drop your Exportify CSV here';document.getElementById('import-btn').disabled=true;document.getElementById('log').classList.remove('visible');document.getElementById('log').innerHTML='';document.getElementById('summary').classList.remove('visible');document.getElementById('progress-wrap').classList.remove('visible')}
+function cleanTitle(t){return t.toLowerCase().replace(/\s*\(feat\..*?\)/gi,'').replace(/\s*\(ft\..*?\)/gi,'').replace(/\s*\(with.*?\)/gi,'').replace(/\s*\(.*?remix.*?\)/gi,'').replace(/\s*\(.*?remaster.*?\)/gi,'').replace(/\s*-\s*remaster(ed)?.*$/gi,'').replace(/\s*-\s*radio edit.*$/gi,'').replace(/\s*-\s*stripped.*$/gi,'').replace(/\s*-\s*acoustic.*$/gi,'').replace(/\s*-\s*live.*$/gi,'').trim()}
+function cleanArtist(a){return a.toLowerCase().split(/,|&| and /)[0].trim()}
+function firebaseKey(t,a){return`${t}|||${a}`.toLowerCase().trim().replace(/[.$#[\]/]/g,'_').replace(/\s+/g,'_').substring(0,200)}
+function wcsBpm(t){return t>140?Math.round(t/2):Math.round(t)}
+async function runImport(){
+  if(!parsedRows.length)return;
+  const btn=document.getElementById('import-btn');
+  btn.disabled=true;btn.textContent='Importing...';
+  const log=document.getElementById('log'),progressWrap=document.getElementById('progress-wrap'),progressFill=document.getElementById('progress-fill'),progressLabel=document.getElementById('progress-label'),progressPct=document.getElementById('progress-pct');
+  log.innerHTML='';log.classList.add('visible');progressWrap.classList.add('visible');document.getElementById('summary').classList.remove('visible');
+  let imported=0,errors=0,halved=0;const total=parsedRows.length;
+  const addLog=(msg,cls='log-entry')=>{const el=document.createElement('div');el.className=`log-entry ${cls}`;el.textContent=msg;log.appendChild(el);log.scrollTop=log.scrollHeight};
+  addLog(`Starting import of ${total} tracks...`,'info');
+  for(let i=0;i<parsedRows.length;i++){
+    const{title,artist,tempo}=parsedRows[i];
+    const bpm=wcsBpm(tempo),ct=cleanTitle(title),ca=cleanArtist(artist),key=firebaseKey(ct,ca),wasHalved=tempo>140;
+    const pct=Math.round(((i+1)/total)*100);
+    progressFill.style.width=`${pct}%`;progressPct.textContent=`${pct}%`;progressLabel.textContent=`Importing ${i+1} of ${total}...`;
+    try{
+      const resp=await fetch(BPM_PROXY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'firebase-set',key,bpm,title:ct,artist:ca,source:'exportify-import'})});
+      const result=resp.ok?await resp.json():{};
+      if(result.ok){imported++;if(wasHalved){halved++;addLog(`✂️ ${title} — ${artist} → ${bpm} BPM (halved from ${Math.round(tempo)})`,'halved')}else if(i%10===0)addLog(`✓ ${title} — ${artist} → ${bpm} BPM`,'ok')}
+      else{errors++;addLog(`✗ ${title} — database save failed — is FIREBASE_DB_URL set?`,'error')}
+    }catch(err){errors++;addLog(`✗ ${title} — ${err.message}`,'error')}
+    await new Promise(r=>setTimeout(r,40));
+  }
+  progressLabel.textContent='Complete!';progressFill.style.width='100%';
+  addLog('','');addLog(`✅ Done! ${imported} imported · ${halved} halved · ${errors} errors`,'done');
+  document.getElementById('sum-imported').textContent=imported;document.getElementById('sum-halved').textContent=halved;document.getElementById('sum-errors').textContent=errors;document.getElementById('summary').classList.add('visible');
+  btn.textContent='Import Another File';btn.disabled=false;btn.onclick=()=>{clearFile();btn.onclick=runImport};
+}
+</script>
+</body>
+</html>

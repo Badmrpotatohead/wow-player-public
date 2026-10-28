@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "bpms": {
+      ".read": true,
+      "$key": {
+        ".write": "newData.exists() && $key.length <= 300",
+        ".validate": "newData.hasChildren(['bpm']) && newData.child('bpm').isNumber() && newData.child('bpm').val() >= 30 && newData.child('bpm').val() <= 300",
+        "bpm": { ".validate": true },
+        "title": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "artist": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "source": { ".validate": "newData.isString() && newData.val().length <= 50" },
+        "updated": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
